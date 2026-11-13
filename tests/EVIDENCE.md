@@ -40,9 +40,9 @@ A real `pstack:poteto-agent` delegate ran the clamp task in `/Volumes/SSD/pd-loc
 - Unauthenticated probe of `https://api.githubcopilot.com/mcp/` → HTTP 401 in 1.2s (endpoint reachable; not a network block). `api.github.com` and `gh` work.
 - Conclusion: the registered connection's authenticated tools fetch times out. The wrapper falls back to authenticated `gh`. MCP config was NOT modified (out of scope per supplement).
 
-## Test B (GitHub writes: Draft PR / push / comment / update) — PENDING
+## Test B (GitHub writes: Draft PR / push / comment / update) — DEFERRED by user (2026-11-13)
 
-Requires a user-authorized NON-research test repo. The four authorized repos (`xpost`, `bs`, `libbpf-mcu`, `classifier`) are real research repos; the supplement forbids test PRs/commits there. No GitHub write was performed or simulated. Awaiting a designated test repo.
+Requires a user-authorized NON-research test repo. The four authorized repos (`xpost`, `bs`, `libbpf-mcu`, `classifier`) are real research repos; the supplement forbids test PRs/commits there. The user chose to defer test B and accept the local closed loop. No GitHub write was performed or simulated. The real-task PR example (deliverable 5) is deferred with test B. Resume: designate a non-research test repo, then run the wrapper's Boundary 3 against it (gh fallback until the MCP connection is fixed).
 
 ## Permissions not yet configured / verified
 

@@ -1,4 +1,0 @@
-# Local decision trails stay out of git by default (show-me-your-work convention).
-.audit/*.tsv
-*.log
-node_modules/

@@ -1,48 +1,108 @@
 # poteto-delivery
 
-A thin Claude Code skill that wraps the installed PStack `poteto-mode` for task-book delivery. PStack decides how the work is done; this skill adds only:
+An explicitly invoked entry adapter for the installed PStack `poteto-mode`.
+It resolves the upstream installation, handles necessary native T3 workspace
+binding, and hands the user's task to PStack. The repository contains only
+`SKILL.md` and this README.
 
-- an isolated `agent/<task-slug>` worktree, initialized and verified, reused on resume;
-- a continuously rechecked `.audit` requirements checklist (committed Markdown) plus PStack's local `show-me-your-work` decision trail;
-- one Draft PR as the live delivery channel: early creation, per-phase push + short comment, final delivery and Ready for Review.
+## Ownership
 
-It does not reimplement PStack's roles, playbooks, TDD, review, or retry rules, and it does not modify PStack. Engineering execution loads the original installed PStack files at runtime (the adapter-documented Read-and-follow composition, since the `Skill` tool refuses `disable-model-invocation` skills).
+| Responsibility | Owner |
+| --- | --- |
+| Explicit entry and the minimum context needed for handoff | poteto-delivery |
+| Task classification, playbooks, orchestration, agents, and models | PStack |
+| Implementation, testing, review, decision trails, PR flow, and task resumption | PStack |
+| T3 thread binding, worktree location, handoff, and thread launch | T3 Code |
+| File access, command execution, Agent/Skill tools, and tool permissions | Claude Code |
+| Remote repository operations | The available GitHub integration or CLI, selected by upstream and host rules |
+
+PStack's current installed files define the workflow. This adapter neither
+vendors them nor restates their steps. Updates therefore use the installed
+version without maintaining a second copy of its workflow.
+
+Any proposed addition must identify a concrete interface gap, check whether
+PStack, T3, or Claude already owns it, and receive explicit user authorization
+before expanding this adapter. An upstream feature gap alone is insufficient.
+Adaptation must remain local to the explicit entry, without adding a workflow,
+state owner, or instructions for unrelated tasks.
 
 ## Install
 
-User-level skill under the active Claude config dir:
+Install and enable PStack in the Claude Code configuration used by your T3
+session. This repository is a standalone Claude Code skill, not a bundled copy
+of PStack or a T3 MCP server.
 
-```bash
-ln -sfn /path/to/poteto-delivery "$CLAUDE_CONFIG_DIR/skills/poteto-delivery"
-chmod +x scripts/*.sh hooks/*.sh
+Link it into that configuration's `skills` directory. On macOS with fish,
+replace the source path below. Set `CLAUDE_CONFIG_DIR` to the configuration
+actually used by T3 before running this if you use a custom directory.
+
+```fish
+set -l pd_config_dir ~/.claude
+if set -q CLAUDE_CONFIG_DIR
+    set pd_config_dir "$CLAUDE_CONFIG_DIR"
+end
+mkdir -p "$pd_config_dir/skills"
+if test -e "$pd_config_dir/skills/poteto-delivery"; or test -L "$pd_config_dir/skills/poteto-delivery"
+    printf '%s\n' 'Destination exists; inspect it before replacing it.'
+else
+    ln -s /absolute/path/to/poteto-delivery "$pd_config_dir/skills/poteto-delivery"
+end
 ```
 
-`scripts/verify-workspace.sh` is the pre-edit gate. Run it after the worktree is bound. A non-zero exit means stop.
-
-The guard hook is optional and stays inactive until a `settings.json` PreToolUse command loads it. The install snippet is below.
-
-```json
-{ "hooks": { "PreToolUse": [ { "matcher": "Bash",
-  "hooks": [ { "type": "command", "command": "/path/to/poteto-delivery/hooks/guard.sh" } ] } ] } }
-```
+If the destination already exists, inspect it before replacing it. No executable
+permission changes, hooks, or global rule edits are needed.
 
 ## Use
 
-Hand the agent a Markdown task book and invoke `/poteto-delivery` (or let the skill trigger on a task-book delivery request). The agent loads PStack, sets up the worktree and `.audit`, runs the matching PStack playbook, and delivers through one Draft PR.
+Start a message with `/poteto-delivery` and provide the task text or a readable
+task-book path, repository, and any required base or authorization limits.
 
-## GitHub channel and permissions
+The entry resolves the enabled PStack installation for the current scope.
+Inside T3 it checks the native thread binding and uses the exposed native
+workspace tools when a change task needs a bound worktree. A handoff ends the
+current session, so its continuation carries the task into the destination and
+checks the binding there before loading PStack. Existing task worktrees are
+reused. The adapter does not invent a worktree path or create one through shell
+commands. Outside T3 it leaves workspace handling to PStack and the host.
 
-Prefers the registered official GitHub MCP (`https://api.githubcopilot.com/mcp/`); falls back to authenticated `gh` when MCP tools are unavailable. Authorized: read repos/branches/commits/files, create `agent/*` branches, commit/push the task branch, create/read/update PRs, create/read Issues, comment in ordinary discussion, read reviews/checks. Forbidden even if credentials allow: merge, push to protected base, force push, delete remote branch/repo, admin/Secrets/Rulesets changes, auto-clean worktree. **Merge is performed by the user alone.** See `references/github.md`.
+After binding, it reads PStack's installed Claude harness and poteto-mode entry
+and follows their composition method. PStack then owns the task. Missing or
+ambiguous upstream installations and unavailable required T3 capabilities are
+reported before execution; they do not trigger a replacement workflow.
 
-## Layout
+`disable-model-invocation: true` makes the skill user-invoked in Claude Code.
+A task book alone does not activate it. Do not add it to `CLAUDE.md`, `AGENTS.md`,
+global rules, hooks, or subagent briefs as a standing instruction.
 
-- `SKILL.md` is the wrapper boundary behavior.
-- `references/worktree.md`, `references/audit.md`, and `references/github.md` hold the detail.
-- `scripts/delivery-state.sh` is the read-only worktree, branch, and PR report, including comment dedupe.
-- `scripts/audit-check.sh` is the checklist gap gate.
-- `scripts/verify-workspace.sh` is the read-only pre-edit gate.
-- `hooks/guard.sh` is the deny-list backstop. It does nothing until settings load it.
+Claude retains invoked skill content in the conversation. Ending the adapter's
+role is an instruction boundary, not a claim that its text is unloaded. The
+adapter has no later stage checks or persistent task lifecycle. Host overrides
+can affect invocation behavior; other hosts need their own invocation controls.
 
-## Status / limitations
+## Upgrading from the previous wrapper
 
-See the delivery report for what is verified vs pending. Notably: the remote GitHub MCP endpoint is reachable but the registered connection's tools fetch currently times out, so this environment uses the `gh` fallback until the MCP connection is fixed (config changes are out of scope here).
+This revision removes all custom scripts, the guard hook, requirements audit
+tables, workspace verifier, delivery state, workflow references, and their
+tests. Draft-first PRs, per-phase pushes/comments, wrapper-selected agents and
+models, and wrapper-specific permission rules are no longer prescribed.
+
+If you manually installed a `PreToolUse` entry pointing to this repository's
+old `hooks/guard.sh`, remove only that obsolete hook entry from the active
+Claude configuration before updating. Likewise, remove any manually added
+global instruction that automatically activates poteto-delivery. The old
+symlink installation can stay. Updating this repository does not change your
+configuration or delete task artifacts in other repositories.
+
+## Source references and validation
+
+- [PStack Claude Code harness](https://github.com/cursor/plugins/blob/main/pstack/docs/harness/claude-code.md).
+- [PStack poteto-mode](https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md).
+- [T3 native worktree tools](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/mcp/toolkits/worktree/tools.ts).
+- [T3 handoff contract](https://github.com/pingdotgg/t3code/blob/main/packages/contracts/src/worktreeMcp.ts).
+- [Claude Code skill invocation and lifecycle](https://code.claude.com/docs/en/skills).
+
+This is an instruction-only adapter. There is no packaged test runner or
+runtime enforcement layer. Validate the frontmatter and source references, then
+check explicit invocation, dependency failures, existing bindings, and handoff
+continuation in the target Claude/T3 session. Source review does not establish
+that those live integrations have been exercised.

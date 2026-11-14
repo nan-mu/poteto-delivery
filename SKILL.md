@@ -1,66 +1,83 @@
 ---
 name: poteto-delivery
-description: Thin delivery wrapper around the installed PStack poteto-mode. Use when the user hands over a Markdown task book (任务书) to build, fix, or change a repo and wants it run in an isolated agent/* worktree with a continuously rechecked .audit requirements checklist and a single Draft PR as the live delivery channel. Adds only worktree/branch init, .audit consistency checks, and GitHub PR stage sync/final delivery. All engineering execution stays in native PStack.
+description: Explicit entry point for handing a repository task to the installed PStack poteto-mode, with native T3 workspace binding when running in T3 Code. Run only when the user invokes /poteto-delivery.
+disable-model-invocation: true
 ---
 
 # poteto-delivery
 
-A thin wrapper. PStack decides **how** the work is done. This skill decides **where** it runs, **how requirements stay checked**, and **where results are delivered**. Do not build a second orchestration system, task queue, state machine, leader service, or reviewer. Do not copy or modify any PStack skill.
+Adapt the entry, then let PStack own the task. Apply these entry steps only to
+this explicit invocation, including its native T3 continuation. Do not activate
+for task books, ordinary messages, other skills, or subagents on your own.
 
-Read [references/github.md](references/github.md) for the GitHub channel and the hard permission boundaries before any remote write.
+## Resolve the installed upstream
 
-## Load PStack (required, verifiable)
+1. Keep the user's task, revisions, repository, and authorization intact.
+2. Resolve PStack from the current session's registered plugin location. If that
+   location is unavailable, inspect `plugins/installed_plugins.json` under the
+   active `CLAUDE_CONFIG_DIR`, or `~/.claude` only when that variable is unset.
+   Match the enabled installation and its scope to the current project using
+   the applicable Claude settings. Do not select an arbitrary cached copy or
+   sort version strings to choose an installation. If the installation is
+   missing, disabled, or ambiguous, report the dependency problem and stop.
+3. Confirm that the resolved root contains `docs/harness/claude-code.md` and
+   `skills/poteto-mode/SKILL.md`. Use the installed originals. Do not pin a
+   version, download a substitute, copy upstream content, or change PStack.
 
-This skill does not restate PStack's workflow. It loads and runs the installed original.
+## Bind the workspace through T3
 
-1. Resolve the install path at runtime, never hardcode a version:
-   `jq -r '.plugins["pstack@cursor-plugins"] | sort_by(.version) | last | .installPath' "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"` (fall back to `~/.claude/plugins/installed_plugins.json`). Call it `PSTACK`. If absent, stop and tell the user PStack is not installed.
-2. Read `PSTACK/docs/harness/claude-code.md` once. It is the official adapter that maps Cursor names to Claude Code and defines how to run another PStack skill: **Read `PSTACK/skills/<name>/SKILL.md` and follow it.** The `Skill` tool refuses `poteto-mode`, `bro`, and most PStack skills (`disable-model-invocation: true`), so Read-and-follow is the supported composition, not a workaround.
-3. Read `PSTACK/skills/poteto-mode/SKILL.md` in full, including its Principles index. Follow it for the whole task.
-4. Match the task to a playbook and Read `PSTACK/skills/poteto-mode/playbooks/<title>.md`. Copy its steps verbatim into the working list before any task-specific step. Route engineering rules (TDD, review, retry, delegation, models) to PStack, not to this skill.
-5. Spawn delegates as `pstack:poteto-agent` per poteto-mode's Subagents section, passing the absolute `PSTACK/skills/poteto-mode/SKILL.md` path in every brief.
+Outside T3, skip this section and leave workspace handling to PStack and the
+host. Inside T3, use the tools actually exposed by the current session. Read
+their current descriptions and schemas; an MCP prefix can vary. Missing T3
+tools in a known T3 session are a capability problem, not a non-T3 fallback.
 
-Record in `.audit` the resolved `PSTACK` path, version, and playbook used. That record is the evidence PStack ran natively (see [references/audit.md](references/audit.md)). Writing `/pstack:poteto-mode` in a prompt is **not** invocation; the Read of the installed file plus a real `pstack:poteto-agent` spawn is.
+1. Read `t3_worktree_status`. For repository changes, establish the intended
+   task's workspace binding before delegating execution. Reuse an existing
+   binding for this task. Check the reported repository, path, and branch
+   against the requested task and the actual shell cwd and git checkout with
+   native read-only tools. A path or branch alone does not prove task identity.
+2. If a suitable task worktree already exists, use T3's exposed native binding
+   or thread-launch capability to continue there. Do not create a duplicate.
+   Use `t3_worktree_list` when needed to locate an existing checkout.
+3. If a new worktree is needed and this thread is unattached, call
+   `t3_worktree_handoff` with the intended branch and base, using the live
+   schema. Use the user's target branch when specified; otherwise choose an
+   unused task branch consistent with repository rules. Let T3 choose the path
+   from its configuration. Preserve the user's
+   intended base and remote-start choice rather than silently replacing them
+   with a different default.
+4. Supply `continuationPrompt` with the task and its revisions, authorization
+   limits, repository and intended base, and the remaining entry steps. Include
+   task text when its file will not be readable from the destination. State
+   that this continues the same explicit invocation: recheck the T3 binding,
+   resolve the installed PStack there, then delegate once. Call handoff last in
+   the turn; it ends the live session. Do not start PStack in the old checkout.
+5. If the current binding belongs to another task, or a native operation is
+   unavailable, rejected, or leaves a mismatch, report the specific blocker
+   before task edits. Do not emulate T3 with shell-created worktrees,
+   `EnterWorktree`, configuration edits, or a custom verifier. Do not move or
+   clean another task's workspace. A thread launch, when supported, must carry
+   the same complete continuation and bind the intended workspace. After a
+   successful launch, end the source invocation without executing the task
+   there or monitoring the destination thread.
 
-## Boundary 1 — before execution
+## Delegate once, then end the adapter's role
 
-Detail in [references/worktree.md](references/worktree.md) and [references/audit.md](references/audit.md).
+Read the resolved `docs/harness/claude-code.md` and
+`skills/poteto-mode/SKILL.md` in full. Follow the installed harness's composition
+method and let poteto-mode run the user's task in the bound workspace. Merely
+writing a slash command in a prompt is not execution. Let PStack select and
+load its own playbooks and dependencies.
 
-1. Inspect the repo, default branch, uncommitted changes, and existing worktrees. Never overwrite another task's uncommitted work.
-2. In T3, before any business edit, read `t3_worktree_status`.
-3. If the thread is attached to this task's `agent/<task-slug>` worktree, reuse it. Do not create another.
-4. If it is not attached, call `t3_worktree_handoff` with branch `agent/<task-slug>` and `baseRef` set to the default branch. Set `startFromOrigin` false when the remote base is not the base you need. A repo with no remote is that case. T3 picks the path under the Worktree location setting. Do not pass a `/Volumes/SSD/bs/<repo>-<slug>` path.
-5. If this thread cannot rebind, create the git worktree only under the T3 worktrees directory as `<worktreesDirectory>/<repoBasename>/<name>`. That path has exactly two segments, so T3 treats it as managed. Cannot rebind means already attached elsewhere, `already_in_worktree`, or `capability_denied`. Launch a new thread with `workspaceStrategy` type `existing_worktree` and that `worktreePath`. If you cannot do that, stop before business edits and say what the user must run.
-6. After binding, run `scripts/verify-workspace.sh` with `--workspace`, `--branch`, `--base`, `--require-cwd "$PWD"`, and `--t3-status` set to the status JSON you just received. Inside T3, edit only when it exits 0. Outside T3, `reason=t3-unverified` with `base=ok` and the expected branch is the expected result. Say the workspace is Claude-native, not T3-managed. Any other `reason` means stop. Do not continue in the main checkout.
-7. `EnterWorktree` is only for a Claude session that is not running inside T3. It is Claude-native and not a T3-managed workspace. Its success does not verify T3 binding.
-8. Subagents inherit this verified cwd. A subagent started with its own worktree must pass the same verifier. On mismatch, stop. Do not fall back to the main checkout.
-9. Resume reuses the existing worktree, branch, and PR.
-10. Do not migrate, delete, or clean other tasks' worktrees.
-11. `hooks/guard.sh` is enforced only when a `settings.json` PreToolUse command points at it. If it does not, say the hook is not installed. Do not claim it blocks anything.
-12. Read the original task book, any later revisions, an existing `.audit`, and project acceptance criteria. Initialize the `.audit` checklist from the user's explicit requirements. Follow an existing `.audit` convention if the repo has one.
-13. After the first meaningful real commit, create one Draft PR early (see Boundary 3 and github.md). No empty or fake commits to force a diff.
+PStack owns classification, orchestration, subagents, models, implementation,
+verification, review, decision trails, PR delivery, and task resumption. Do not
+restate or override those procedures. Do not impose a checklist, phase gate,
+branch naming scheme, Draft PR policy, comment cadence, GitHub tool preference,
+or permission system. Preserve the user's actual authorization and host rules.
 
-## Boundary 2 — during execution
-
-1. Recheck the `.audit` checklist at least: before implementation starts, when PStack confirms a substantive phase done, before each commit/push, and before claiming completion. The question is **does the implementation satisfy the original task book**, not merely "does it compile / do tests pass".
-2. On a gap, deviation, or weak verification, keep going through PStack. Do not escalate routine technical problems.
-3. When a phase with real artifacts and completed verification ends: recheck `.audit`, commit per PStack, push the `agent/*` branch, post one short stage comment on the existing PR (see Boundary 3). Dedupe by head SHA.
-4. Escalate to the user in the current T3 thread **only** for the genuine conflicts in [references/audit.md](references/audit.md): mutually unsatisfiable requirements, an established `.audit` constraint that materially conflicts with the task with no revision to resolve it, a goal change beyond authorization, a permission/irreversible-risk block, or evidence exhausted after reasonable investigation. Save work and evidence, log the conflict and candidate resolutions in `.audit`, ask a specific question. Never relax a requirement or fake completion.
-
-## Boundary 3 — GitHub PR delivery
-
-Detail and the permission boundary in [references/github.md](references/github.md). One Draft PR per task, updated in place.
-
-- **Stage comment.** Draft a fact-accurate summary from the real diff, commits, test output, and `.audit`. Then Read `PSTACK/skills/bro/SKILL.md` and apply it to compress the wording. Keep every test conclusion, failure, and evidence link; brevity never removes verifiability. Post one comment per phase; never repeat the same phase at the same head SHA.
-- **Final delivery.** After PStack's own verification and review, recheck every task-book item in `.audit`. Confirm requirements met (or explicitly recorded as unmet), real test/demo evidence, independent review not bypassed, clean git state, all deliverables committed. Then push, update the PR description to a full delivery summary (PStack `opening-a-pr` body structure), post a final evidence comment, and mark Ready for Review **only if all required acceptance passes**. Otherwise keep Draft and show why.
-- **Ready for Review is not Merge. Merge is performed by the user alone on GitHub.** Never merge, never auto-clean the worktree.
-
-This draft-first lifecycle is a deliberate, recorded override of `opening-a-pr`'s "open every PR ready" line, because the task book assigns the PR lifecycle to this wrapper. Every other `opening-a-pr` rule (Conventional Commits title, `## Why/What changed/Scope/Tradeoffs/Blast Radius/Verification` body, forge resolution) still applies.
-
-## Resume
-
-Do not build a state database. Recover from real artifacts: the T3 thread/worktree binding, PStack's session-pickup playbook, the current worktree and `agent/*` branch, `.audit`, existing commits, and the existing PR. Read them first, diff done vs pending, name the resume point, continue in the same PR. A single model response ending is not task completion. See [references/worktree.md](references/worktree.md).
-
-## Prose
-
-All PR text and user-facing replies follow PStack: Read `PSTACK/skills/bro/SKILL.md` for plain compression and follow poteto-mode's "Writing the reply" and `technical-writing`/`unslop`. Do not invent a separate style system.
+After delegation, perform no adapter phase checks, monitoring, or cleanup, and
+do not re-enter on later messages unless explicitly invoked again. Do not
+propagate this skill as standing instructions to delegates or other workflows.
+Do not install hooks, global rules, scripts, task state, or default injection.
+If an interface gap prevents delegation, report it; do not replace PStack with
+a local workflow.

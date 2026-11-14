@@ -17,7 +17,9 @@ ln -sfn /path/to/poteto-delivery "$CLAUDE_CONFIG_DIR/skills/poteto-delivery"
 chmod +x scripts/*.sh hooks/*.sh
 ```
 
-Optional hard backstop for the deny list (PreToolUse hook). Add to `settings.json`:
+`scripts/verify-workspace.sh` is the pre-edit gate. Run it after the worktree is bound. A non-zero exit means stop.
+
+The guard hook is optional and stays inactive until a `settings.json` PreToolUse command loads it. The install snippet is below.
 
 ```json
 { "hooks": { "PreToolUse": [ { "matcher": "Bash",
@@ -34,11 +36,12 @@ Prefers the registered official GitHub MCP (`https://api.githubcopilot.com/mcp/`
 
 ## Layout
 
-- `SKILL.md` — the wrapper boundary behavior.
-- `references/worktree.md`, `references/audit.md`, `references/github.md` — detail.
-- `scripts/delivery-state.sh` — read-only worktree/branch/PR state + comment dedupe.
-- `scripts/audit-check.sh` — deterministic checklist gap gate.
-- `hooks/guard.sh` — minimal deny-list backstop.
+- `SKILL.md` is the wrapper boundary behavior.
+- `references/worktree.md`, `references/audit.md`, and `references/github.md` hold the detail.
+- `scripts/delivery-state.sh` is the read-only worktree, branch, and PR report, including comment dedupe.
+- `scripts/audit-check.sh` is the checklist gap gate.
+- `scripts/verify-workspace.sh` is the read-only pre-edit gate.
+- `hooks/guard.sh` is the deny-list backstop. It does nothing until settings load it.
 
 ## Status / limitations
 

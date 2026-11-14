@@ -27,9 +27,18 @@ Record in `.audit` the resolved `PSTACK` path, version, and playbook used. That 
 Detail in [references/worktree.md](references/worktree.md) and [references/audit.md](references/audit.md).
 
 1. Inspect the repo, default branch, uncommitted changes, and existing worktrees. Never overwrite another task's uncommitted work.
-2. Ensure an isolated worktree on branch `agent/<task-slug>`. Reuse the task's existing worktree/branch/PR on resume; do not recreate. Verify the shell's actual working directory is that worktree before editing.
-3. Read the original task book, any later revisions, an existing `.audit`, and project acceptance criteria. Initialize the `.audit` checklist from the user's explicit requirements. Follow an existing `.audit` convention if the repo has one.
-4. After the first meaningful real commit, create one Draft PR early (see Boundary 3 and github.md). No empty or fake commits to force a diff.
+2. In T3, before any business edit, read `t3_worktree_status`.
+3. If the thread is attached to this task's `agent/<task-slug>` worktree, reuse it. Do not create another.
+4. If it is not attached, call `t3_worktree_handoff` with branch `agent/<task-slug>` and `baseRef` set to the default branch. Set `startFromOrigin` false when the remote base is not the base you need. A repo with no remote is that case. T3 picks the path under the Worktree location setting. Do not pass a `/Volumes/SSD/bs/<repo>-<slug>` path.
+5. If this thread cannot rebind, create the git worktree only under the T3 worktrees directory as `<worktreesDirectory>/<repoBasename>/<name>`. That path has exactly two segments, so T3 treats it as managed. Cannot rebind means already attached elsewhere, `already_in_worktree`, or `capability_denied`. Launch a new thread with `workspaceStrategy` type `existing_worktree` and that `worktreePath`. If you cannot do that, stop before business edits and say what the user must run.
+6. After binding, run `scripts/verify-workspace.sh` with `--workspace`, `--branch`, `--base`, `--require-cwd "$PWD"`, and `--t3-status` set to the status JSON you just received. Inside T3, edit only when it exits 0. Outside T3, `reason=t3-unverified` with `base=ok` and the expected branch is the expected result. Say the workspace is Claude-native, not T3-managed. Any other `reason` means stop. Do not continue in the main checkout.
+7. `EnterWorktree` is only for a Claude session that is not running inside T3. It is Claude-native and not a T3-managed workspace. Its success does not verify T3 binding.
+8. Subagents inherit this verified cwd. A subagent started with its own worktree must pass the same verifier. On mismatch, stop. Do not fall back to the main checkout.
+9. Resume reuses the existing worktree, branch, and PR.
+10. Do not migrate, delete, or clean other tasks' worktrees.
+11. `hooks/guard.sh` is enforced only when a `settings.json` PreToolUse command points at it. If it does not, say the hook is not installed. Do not claim it blocks anything.
+12. Read the original task book, any later revisions, an existing `.audit`, and project acceptance criteria. Initialize the `.audit` checklist from the user's explicit requirements. Follow an existing `.audit` convention if the repo has one.
+13. After the first meaningful real commit, create one Draft PR early (see Boundary 3 and github.md). No empty or fake commits to force a diff.
 
 ## Boundary 2 — during execution
 

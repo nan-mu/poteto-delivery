@@ -47,11 +47,12 @@ tools in a known T3 session are a capability problem, not a non-T3 fallback.
    intended base and remote-start choice rather than silently replacing them
    with a different default.
 4. Supply `continuationPrompt` with the task and its revisions, authorization
-   limits, repository and intended base, and the remaining entry steps. Include
-   task text when its file will not be readable from the destination. State
-   that this continues the same explicit invocation: recheck the T3 binding,
-   resolve the installed PStack there, then delegate once. Call handoff last in
-   the turn; it ends the live session. Do not start PStack in the old checkout.
+   limits, repository and intended base, the route block below, and the
+   remaining entry steps. Include task text when its file will not be readable
+   from the destination. State that this continues the same explicit
+   invocation: recheck the T3 binding, resolve the installed PStack there,
+   then delegate once. Call handoff last in the turn; it ends the live
+   session. Do not start PStack in the old checkout.
 5. If the current binding belongs to another task, or a native operation is
    unavailable, rejected, or leaves a mismatch, report the specific blocker
    before task edits. Do not emulate T3 with shell-created worktrees,
@@ -71,9 +72,9 @@ load its own playbooks and dependencies.
 
 PStack owns classification, orchestration, subagents, models, implementation,
 verification, review, decision trails, PR delivery, and task resumption. Do not
-restate or override those procedures. Do not impose a checklist, phase gate,
-branch naming scheme, Draft PR policy, comment cadence, GitHub tool preference,
-or permission system. Preserve the user's actual authorization and host rules.
+restate or override those procedures. Preserve the user's actual authorization
+and host rules. Include the route block below in this delegation. Do not add
+any other tool preference.
 
 After delegation, perform no adapter phase checks, monitoring, or cleanup, and
 do not re-enter on later messages unless explicitly invoked again. Do not
@@ -81,3 +82,79 @@ propagate this skill as standing instructions to delegates or other workflows.
 Do not install hooks, global rules, scripts, task state, or default injection.
 If an interface gap prevents delegation, report it; do not replace PStack with
 a local workflow.
+
+## Route GitHub through Magpie
+
+Apply this route only while this skill is explicitly invoked, including its
+T3 continuation. Do not install it as a hook, a global rule, or a default
+for other tasks.
+
+A Claude Code subagent does not receive a skill its parent already read. It
+receives the prompt it was given. PStack already copies the original brief
+and later directives into a fresh subagent. Put the route block in that
+brief. Do not add a scheduler, a hook, or a prompt template, and do not
+change how PStack chooses agents.
+
+Include the route block in the one delegation to PStack, and in the T3
+continuation. When a later brief assigns a push, or assigns a pull request,
+issue, review, comment, label, or reviewer action, include the same block.
+Do not append it separately to unrelated briefs. It may remain present
+through PStack's inherited original brief. Do not paste the rest of this
+skill into any brief.
+
+Route block:
+
+```text
+Local git operations use git. Push the remote branch with git push. Do not
+use MCP push_files in place of git push, and do not recreate a local commit
+through MCP. GitHub pull requests, issues, reviews, comments, labels, and
+reviewers use the Magpie GitHub MCP tools this session exposes. Do not invoke
+the `gh` or `origin` CLI executables (for example, `gh pr ...` or `origin pr
+...`), or any other GitHub/Forge CLI. Do not call the GitHub HTTP API. If the
+needed GitHub MCP tool is missing, mark that platform action BLOCKED and name
+the missing tool. Do not fall back.
+```
+
+Inside this invocation and those briefs, this tool choice overrides PStack's
+default forge selection (`origin pr` when available, otherwise `gh`) in
+`docs/harness/claude-code.md` and
+`skills/poteto-mode/playbooks/opening-a-pr.md`. It does not override
+classification, playbook choice, orchestration, models, implementation,
+review, when a pull request is opened, what it contains, its lifecycle,
+audit, or resumption. Do not copy or rewrite those files.
+
+Use the GitHub MCP tools the current session exposes through Magpie. Use git
+for branch transport. Do not hardcode an MCP server implementation, and do
+not add a GitHub client here.
+
+| Action | Tool |
+| --- | --- |
+| Edit files | The session's file tools |
+| Local branches, `git add`, and `git commit` | git |
+| Create or update the remote branch | `git push -u origin <branch>` |
+| Create, read, or update a pull request | The session's Magpie GitHub MCP tools |
+| Pull request comments | The session's Magpie GitHub MCP tools |
+| Issues | The session's Magpie GitHub MCP tools |
+| Labels and reviewers | The session's Magpie GitHub MCP tools |
+| Worktrees in T3 Code | The T3 tools in "Bind the workspace through T3", not `git worktree add` |
+| Worktrees outside T3 | PStack and the host. This route adds no worktree rule. |
+
+In T3 Code, do not create a task workspace that T3 does not manage. Outside
+T3, do not add a T3 worktree rule. `git add`, `git commit`, `git fetch`, and
+`git push` stay git in both places.
+
+PStack still owns the pull request workflow. This route only chooses the tool.
+
+Do not use MCP `push_files` in place of `git push`. Do not recreate a local
+commit through MCP. Keep the local commit SHA, author, and parents. Create
+the pull request only after `git push` succeeds.
+
+If the session does not expose the GitHub MCP tool the action needs, fail
+closed. Do not fall back to `gh`, another GitHub CLI, or the GitHub HTTP
+API. Local edits, tests, commit, and `git push` may continue, and a pushed
+branch stays. Mark that action BLOCKED, and name the missing MCP server or
+tool. A missing `create_pull_request` tool blocks pull request creation.
+Never say a pull request exists unless that MCP call returned it.
+
+Do not impose a checklist, phase gate, branch naming scheme, Draft PR
+policy, comment cadence, or permission system.

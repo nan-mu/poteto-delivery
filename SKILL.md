@@ -108,14 +108,16 @@ Route block:
 Local git operations use git. Push the remote branch with git push. Do not
 use MCP push_files in place of git push, and do not recreate a local commit
 through MCP. GitHub pull requests, issues, reviews, comments, labels, and
-reviewers use the Magpie GitHub MCP tools this session exposes. Do not use
-gh, origin, or any other GitHub/forge CLI. Do not call the GitHub HTTP API.
-If the needed GitHub MCP tool is missing, mark that platform action BLOCKED
-and name the missing tool. Do not fall back.
+reviewers use the Magpie GitHub MCP tools this session exposes. Do not invoke
+the `gh` or `origin` CLI executables (for example, `gh pr ...` or `origin pr
+...`), or any other GitHub/Forge CLI. Do not call the GitHub HTTP API. If the
+needed GitHub MCP tool is missing, mark that platform action BLOCKED and name
+the missing tool. Do not fall back.
 ```
 
 Inside this invocation and those briefs, this tool choice overrides PStack's
-default of `gh` in `docs/harness/claude-code.md` and
+default forge selection (`origin pr` when available, otherwise `gh`) in
+`docs/harness/claude-code.md` and
 `skills/poteto-mode/playbooks/opening-a-pr.md`. It does not override
 classification, playbook choice, orchestration, models, implementation,
 review, when a pull request is opened, what it contains, its lifecycle,

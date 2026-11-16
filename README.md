@@ -14,7 +14,8 @@ binding, and hands the user's task to PStack. The repository contains only
 | Implementation, testing, review, decision trails, PR flow, and task resumption | PStack |
 | T3 thread binding, worktree location, handoff, and thread launch | T3 Code |
 | File access, command execution, Agent/Skill tools, and tool permissions | Claude Code |
-| Remote repository operations | The available GitHub integration or CLI, selected by upstream and host rules |
+| Remote branch transport | git, including `git push` |
+| GitHub pull requests, issues, reviews, and labels | Magpie GitHub MCP while `/poteto-delivery` is invoked. No `gh`, and no HTTP fallback. The route is in `SKILL.md`. |
 
 PStack's current installed files define the workflow. This adapter neither
 vendors them nor restates their steps. Updates therefore use the installed

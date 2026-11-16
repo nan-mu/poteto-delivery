@@ -15,11 +15,17 @@ binding, and hands the user's task to PStack. The repository contains only
 | T3 thread binding, worktree location, handoff, and thread launch | T3 Code |
 | File access, command execution, Agent/Skill tools, and tool permissions | Claude Code |
 | Remote branch transport | git, including `git push` |
-| GitHub pull requests, issues, reviews, and labels | Magpie GitHub MCP while `/poteto-delivery` is invoked. No `gh`, and no HTTP fallback. The route is in `SKILL.md`. |
+| GitHub pull requests, issues, reviews, and labels | Magpie GitHub MCP while `/poteto-delivery` is invoked. No `gh`, no other GitHub CLI, and no HTTP fallback. The route block is in `SKILL.md`. |
 
 PStack's current installed files define the workflow. This adapter neither
 vendors them nor restates their steps. Updates therefore use the installed
 version without maintaining a second copy of its workflow.
+
+While `/poteto-delivery` is invoked, the GitHub tool choice above overrides
+PStack's default GitHub CLI for this task and for a brief that carries the
+route block. PStack still chooses when a pull request is opened and what it
+contains. In T3 Code, worktree binding stays with T3. Outside T3, PStack and
+the host choose worktree handling.
 
 Any proposed addition must identify a concrete interface gap, check whether
 PStack, T3, or Claude already owns it, and receive explicit user authorization
@@ -73,7 +79,9 @@ reported before execution; they do not trigger a replacement workflow.
 
 `disable-model-invocation: true` makes the skill user-invoked in Claude Code.
 A task book alone does not activate it. Do not add it to `CLAUDE.md`, `AGENTS.md`,
-global rules, hooks, or subagent briefs as a standing instruction.
+global rules, or hooks. Do not paste this skill into a subagent brief. During
+an explicit invocation, copy only the route block in `SKILL.md` into a brief
+that pushes or calls GitHub. Other briefs do not get it.
 
 Claude retains invoked skill content in the conversation. Ending the adapter's
 role is an instruction boundary, not a claim that its text is unloaded. The

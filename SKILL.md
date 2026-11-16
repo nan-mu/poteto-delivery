@@ -98,8 +98,9 @@ change how PStack chooses agents.
 Include the route block in the one delegation to PStack, and in the T3
 continuation. When a later brief assigns a push, or assigns a pull request,
 issue, review, comment, label, or reviewer action, include the same block.
-Leave it out of every other brief. Do not paste the rest of this skill into
-any brief.
+Do not append it separately to unrelated briefs. It may remain present
+through PStack's inherited original brief. Do not paste the rest of this
+skill into any brief.
 
 Route block:
 
@@ -108,9 +109,9 @@ Local git operations use git. Push the remote branch with git push. Do not
 use MCP push_files in place of git push, and do not recreate a local commit
 through MCP. GitHub pull requests, issues, reviews, comments, labels, and
 reviewers use the Magpie GitHub MCP tools this session exposes. Do not use
-gh or another GitHub CLI. Do not call the GitHub HTTP API. If the needed
-GitHub MCP tool is missing, mark that platform action BLOCKED and name the
-missing tool. Do not fall back.
+gh, origin, or any other GitHub/forge CLI. Do not call the GitHub HTTP API.
+If the needed GitHub MCP tool is missing, mark that platform action BLOCKED
+and name the missing tool. Do not fall back.
 ```
 
 Inside this invocation and those briefs, this tool choice overrides PStack's

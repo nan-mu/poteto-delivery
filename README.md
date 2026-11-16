@@ -80,8 +80,10 @@ reported before execution; they do not trigger a replacement workflow.
 `disable-model-invocation: true` makes the skill user-invoked in Claude Code.
 A task book alone does not activate it. Do not add it to `CLAUDE.md`, `AGENTS.md`,
 global rules, or hooks. Do not paste this skill into a subagent brief. During
-an explicit invocation, copy only the route block in `SKILL.md` into a brief
-that pushes or calls GitHub. Other briefs do not get it.
+an explicit invocation, the route block in `SKILL.md` goes into the initial
+delegation, the T3 continuation, and a later brief that pushes or calls GitHub.
+Do not append it separately to unrelated briefs. It may remain present through
+PStack's inherited original brief.
 
 Claude retains invoked skill content in the conversation. Ending the adapter's
 role is an instruction boundary, not a claim that its text is unloaded. The

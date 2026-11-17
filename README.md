@@ -1,120 +1,43 @@
 # poteto-delivery
 
-An explicitly invoked entry adapter for the installed PStack `poteto-mode`.
-It resolves the upstream installation, handles necessary native T3 workspace
-binding, and hands the user's task to PStack. The repository contains only
-`SKILL.md` and this README.
+poteto-delivery 是调用已安装 PStack 的薄入口，支持 Pi、Claude Code 和 Codex，并在 T3 Code 中处理必要的线程与工作区交接。它需要显式调用。
 
-## Ownership
+## 职责
 
-| Responsibility | Owner |
+- **PStack**：任务分类、Playbook、Agent 编排、实现、验证和 PR 生命周期。
+- **当前 Harness**：Skill 加载、原生文件与命令工具、子代理接口和权限。
+- **T3 Code**：线程及工作区绑定、当前线程迁移和独立线程启动。
+- **Magpie**：Skill 分发、已有模型路由基础设施及 GitHub MCP。
+- **poteto-delivery**：发现 PStack、适配调用接口、传递任务上下文，并应用本次调用的 GitHub 路由约定。
+
+实际执行规则统一维护在 [SKILL.md](SKILL.md)，不在 README 重复定义。
+
+## 安装
+
+1. 通过 Magpie 或当前 Harness 支持的方式安装 PStack，使 `poteto-mode` 及所需依赖出现在会话注册的 Skill 或 Plugin 资源中。
+2. 将本仓库作为 `poteto-delivery` Skill 安装到当前 Harness 支持的位置，保留目录结构，包括 [agents/openai.yaml](agents/openai.yaml)。也可通过当前 Harness 支持的 Skill 分发方式安装。
+3. 在 T3 中使用时，确保会话暴露原生线程和工作区工具；涉及 GitHub 操作时，确保 Magpie GitHub MCP 可用。
+
+本仓库不包含 PStack 副本，不提供脚本、Hook 或委派运行时，也不修改上游 Skill。
+
+## 调用
+
+在当前 Harness 中显式调用并提供任务正文：
+
+| Harness | 入口示例 |
 | --- | --- |
-| Explicit entry and the minimum context needed for handoff | poteto-delivery |
-| Task classification, playbooks, orchestration, agents, and models | PStack |
-| Implementation, testing, review, decision trails, PR flow, and task resumption | PStack |
-| T3 thread binding, worktree location, handoff, and thread launch | T3 Code |
-| File access, command execution, Agent/Skill tools, and tool permissions | Claude Code |
-| Remote branch transport | git, including `git push` |
-| GitHub pull requests, issues, reviews, and labels | Magpie GitHub MCP while `/poteto-delivery` is invoked. No `gh` or `origin` CLI executables, no other GitHub/Forge CLI, and no HTTP fallback. The route block is in `SKILL.md`. |
+| Pi | `/skill:poteto-delivery 修复订单页面的提交错误` |
+| Claude Code | `/poteto-delivery 修复订单页面的提交错误` |
+| Codex | `$poteto-delivery 修复订单页面的提交错误` |
 
-PStack's current installed files define the workflow. This adapter neither
-vendors them nor restates their steps. Updates therefore use the installed
-version without maintaining a second copy of its workflow.
+Pi 和 Claude Code 使用 Skill frontmatter 的显式调用控制；Codex 使用 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`。实际支持取决于当前 Harness 版本，不能仅凭 frontmatter 宣称三个宿主都已强制执行。
 
-While `/poteto-delivery` is invoked, the GitHub tool choice above overrides
-PStack's default forge selection (`origin pr` when available, otherwise `gh`)
-for this task and for a brief that carries the route block. PStack still
-chooses when a pull request is opened and what it contains. In T3 Code,
-worktree binding stays with T3. Outside T3, PStack and the host choose
-worktree handling.
+入口会按已安装 PStack 的上游适配规则加载和组合技能，再将工作流交给 PStack。缺少必要能力时会报告具体阻塞，不建立替代工作流。
 
-Any proposed addition must identify a concrete interface gap, check whether
-PStack, T3, or Claude already owns it, and receive explicit user authorization
-before expanding this adapter. An upstream feature gap alone is insufficient.
-Adaptation must remain local to the explicit entry, without adding a workflow,
-state owner, or instructions for unrelated tasks.
+## 使用说明
 
-## Install
+在 T3 中，当前线程迁移到新 Worktree 与启动独立线程是不同操作。入口先核对线程绑定，并优先复用属于当前任务的工作区。迁移通过 T3 handoff 延续原任务；独立线程仅在用户要求时启动，目的线程重新核对绑定和依赖。
 
-Install and enable PStack in the Claude Code configuration used by your T3
-session. This repository is a standalone Claude Code skill, not a bundled copy
-of PStack or a T3 MCP server.
+本次显式调用及必要交接中，本地文件修改使用原生工具，提交和分支推送使用 git；PR、Issue、Review、评论、标签与 Reviewer 操作使用 Magpie GitHub MCP。缺少对应 MCP 能力时报告 `BLOCKED`。该约定不会安装为其他任务的全局规则。
 
-Link it into that configuration's `skills` directory. On macOS with fish,
-replace the source path below. Set `CLAUDE_CONFIG_DIR` to the configuration
-actually used by T3 before running this if you use a custom directory.
-
-```fish
-set -l pd_config_dir ~/.claude
-if set -q CLAUDE_CONFIG_DIR
-    set pd_config_dir "$CLAUDE_CONFIG_DIR"
-end
-mkdir -p "$pd_config_dir/skills"
-if test -e "$pd_config_dir/skills/poteto-delivery"; or test -L "$pd_config_dir/skills/poteto-delivery"
-    printf '%s\n' 'Destination exists; inspect it before replacing it.'
-else
-    ln -s /absolute/path/to/poteto-delivery "$pd_config_dir/skills/poteto-delivery"
-end
-```
-
-If the destination already exists, inspect it before replacing it. No executable
-permission changes, hooks, or global rule edits are needed.
-
-## Use
-
-Start a message with `/poteto-delivery` and provide the task text or a readable
-task-book path, repository, and any required base or authorization limits.
-
-The entry resolves the enabled PStack installation for the current scope.
-Inside T3 it checks the native thread binding and uses the exposed native
-workspace tools when a change task needs a bound worktree. A handoff ends the
-current session, so its continuation carries the task into the destination and
-checks the binding there before loading PStack. Existing task worktrees are
-reused. The adapter does not invent a worktree path or create one through shell
-commands. Outside T3 it leaves workspace handling to PStack and the host.
-
-After binding, it reads PStack's installed Claude harness and poteto-mode entry
-and follows their composition method. PStack then owns the task. Missing or
-ambiguous upstream installations and unavailable required T3 capabilities are
-reported before execution; they do not trigger a replacement workflow.
-
-`disable-model-invocation: true` makes the skill user-invoked in Claude Code.
-A task book alone does not activate it. Do not add it to `CLAUDE.md`, `AGENTS.md`,
-global rules, or hooks. Do not paste this skill into a subagent brief. During
-an explicit invocation, the route block in `SKILL.md` goes into the initial
-delegation, the T3 continuation, and a later brief that pushes or calls GitHub.
-Do not append it separately to unrelated briefs. It may remain present through
-PStack's inherited original brief.
-
-Claude retains invoked skill content in the conversation. Ending the adapter's
-role is an instruction boundary, not a claim that its text is unloaded. The
-adapter has no later stage checks or persistent task lifecycle. Host overrides
-can affect invocation behavior; other hosts need their own invocation controls.
-
-## Upgrading from the previous wrapper
-
-This revision removes all custom scripts, the guard hook, requirements audit
-tables, workspace verifier, delivery state, workflow references, and their
-tests. Draft-first PRs, per-phase pushes/comments, wrapper-selected agents and
-models, and wrapper-specific permission rules are no longer prescribed.
-
-If you manually installed a `PreToolUse` entry pointing to this repository's
-old `hooks/guard.sh`, remove only that obsolete hook entry from the active
-Claude configuration before updating. Likewise, remove any manually added
-global instruction that automatically activates poteto-delivery. The old
-symlink installation can stay. Updating this repository does not change your
-configuration or delete task artifacts in other repositories.
-
-## Source references and validation
-
-- [PStack Claude Code harness](https://github.com/cursor/plugins/blob/main/pstack/docs/harness/claude-code.md).
-- [PStack poteto-mode](https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md).
-- [T3 native worktree tools](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/mcp/toolkits/worktree/tools.ts).
-- [T3 handoff contract](https://github.com/pingdotgg/t3code/blob/main/packages/contracts/src/worktreeMcp.ts).
-- [Claude Code skill invocation and lifecycle](https://code.claude.com/docs/en/skills).
-
-This is an instruction-only adapter. There is no packaged test runner or
-runtime enforcement layer. Validate the frontmatter and source references, then
-check explicit invocation, dependency failures, existing bindings, and handoff
-continuation in the target Claude/T3 session. Source review does not establish
-that those live integrations have been exercised.
+本仓库提供接口规则和最小调用元数据，不保证某个环境已经完成集成验证。实际使用仍需检查该会话的 Skill 注册、工具 Schema、T3 绑定和 MCP 能力。

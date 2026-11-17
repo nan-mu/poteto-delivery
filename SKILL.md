@@ -31,8 +31,14 @@ to this invocation and its necessary continuation.
 Preserve the user's task, revisions, authorization, repository, and requested
 base. Resolve `poteto-mode/SKILL.md` from this session's registered skill or
 plugin resources, following registered paths rather than choosing an arbitrary
-cached version. A plugin usually stores it at `skills/poteto-mode/SKILL.md`;
-a flattened skill library may register it separately.
+cached version. Retain the readable file's absolute path and its provenance as
+the current session's registered resource in the actual handoff context, not
+just a skill name or relative path. Do not select by version sorting or replace
+it with a Cursor plugin cache or another installation. If the registered path
+cannot be resolved or read, report `BLOCKED` with the specific gap. A plugin
+usually stores it at `skills/poteto-mode/SKILL.md`; a flattened skill library
+may register it separately. Resolve this at runtime; do not hardcode a user's
+machine path here.
 
 Read the installed entry in full and its applicable upstream harness rules.
 Upstream composition rules take priority over the interface guidance below,
@@ -45,7 +51,9 @@ files. Report missing, disabled, ambiguous, or incompatible dependencies.
 Discover PStack through the current session's registered Skill resources. Read
 skills with Pi's actual file tools and compose or invoke them using its exposed
 capabilities and upstream instructions. If upstream supports composition in the
-current session, read and apply its entry there.
+current session, read and apply its entry there. Pass the resolved absolute
+`poteto-mode/SKILL.md` path and its registered-resource provenance through
+PStack's existing context composition and delegation, as specified below.
 
 Pi's Agent capability comes from the actually loaded
 `@tintinweb/pi-subagents` extension, not an assumed built-in Agent or Task tool.
@@ -55,13 +63,26 @@ when required by PStack. Do not transplant Claude Task, Skill, AskQuestion, or
 EnterWorktree calls. Preserve PStack's ownership of playbooks, agent roles,
 models, and execution; this adapter only resolves the interface.
 
-Before required delegation, confirm that the extension can resolve and start the
-exact agent type PStack requests, including `poteto-agent`. Reading a Skill or
-finding an agent definition alone does not establish registration. Check runtime
-registration or dispatch metadata for the resolved type and any fallback notice;
-an agent's self-reported identity is not proof. Use read-only capability probes
-when needed, without running playbooks, editing files, spawning nested agents,
-or performing GitHub operations.
+Check existing evidence before delegation, in this order: the current Agent
+tool schema's available-type list; Pi Subagents' registry or `/agents`
+information; existing actual dispatch records and runtime metadata. Confirm
+that the exact requested type, including `poteto-agent`, is registered and
+enabled, the interface accepts PStack's required parameters, and unknown-type
+fallback is disabled. A definition file's existence or an agent's self-reported
+identity alone is insufficient.
+
+Reliable registration information and the current schema normally suffice for
+preflight. Do not create an extra test agent on each invocation or PStack
+startup, repeat a full read-only probe, reread large skills to check a type, or
+spawn a probe when registration evidence already answers the question.
+
+Use PStack's normal delegation flow. On the actual delegation, inspect the
+available runtime results to confirm that both requested and resolved types
+are `poteto-agent` when PStack requests it, no fallback occurred, and the child
+read the parent's supplied absolute PStack Skill path. Do not launch a duplicate
+test agent for this verification. If runtime evidence cannot establish the real
+dispatch type or the required path read, report the verification gap as `BLOCKED`;
+a successful call alone does not prove the type.
 
 Unknown types must fail. Never accept `general-purpose` or another agent as a
 replacement for the requested type. If the extension is missing, the type is
@@ -137,9 +158,14 @@ runtime schema.
 4. Supply a complete `continuationPrompt`: the task and revisions, authorization
    limits, repository, target branch/base and remote-start choice, the selected
    host's interface guidance, remaining entry steps, and the GitHub route block
-   below. Include task text if its source file is unavailable at the destination.
+   below. Include the resolved PStack Skill absolute path and its registered
+   resource provenance as literal context in `continuationPrompt`. Include task
+   text if its source file is unavailable at the destination.
    Say this continues the same explicit invocation and must recheck binding,
-   resolve installed PStack, then hand control to it once. Call handoff last
+   verify the supplied path is still readable and matches the destination's
+   registered PStack resource, then hand control to it once. If it is inaccessible
+   or mismatched, report `BLOCKED` with the path and specific gap; do not silently
+   switch to a Cursor plugin cache or another version. Call handoff last
    in the turn because it ends the active turn. Resume only after checking
    the destination binding against that context. In the resumed thread,
    call `t3_worktree_status` again and confirm the target repository, branch,
@@ -186,9 +212,15 @@ After binding, compose or invoke the installed entry using its upstream harness
 rules and the current host's real interfaces. Writing a slash command in a
 brief alone is not execution. Let PStack select its own dependencies and agents.
 Carry the user's full task and revisions, authorization limits, confirmed
-workspace context, and route block. A fresh child may not inherit a skill the
-parent read: provide the necessary context using upstream's composition method.
-Do not paste this entire adapter into unrelated briefs.
+workspace context, and route block. Include the resolved absolute
+`poteto-mode/SKILL.md` path and state that it comes from this session's registered
+Skill resource. In that same actual handoff, require PStack to carry this exact
+path into every child brief that needs the Skill, using its existing context
+composition and delegation mechanism. Children must read the supplied path
+directly, rather than search other installations. A fresh child may not inherit
+a skill the parent read. Do not modify upstream PStack or agent definitions or
+add a delegation mechanism to deliver this context. Do not paste this entire
+adapter into unrelated briefs.
 
 After handing control to PStack, perform no adapter phase checks, monitoring,
 or cleanup. Do not re-enter on later messages without another explicit

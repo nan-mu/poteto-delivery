@@ -1,43 +1,53 @@
 # poteto-delivery
 
-poteto-delivery 是调用已安装 PStack 的薄入口，支持 Pi、Claude Code 和 Codex，并在 T3 Code 中处理必要的线程与工作区交接。它需要显式调用。
+poteto-delivery 是一组面向 T3 Code 代码工程流程的个人使用习惯 Skills。它记录个人的软件工程工作方式、工具使用约定、工作区管理习惯，以及与 PStack 的协作方式，通过显式调用生效。
 
-## 职责
+T3 Code 是主要设计目标。Pi 是当前适配的辅助运行环境，其 Agent 能力取决于实际加载的扩展和 Agent Definition。
 
-- **PStack**：任务分类、Playbook、Agent 编排、实现、验证和 PR 生命周期。
-- **当前 Harness**：Skill 加载、原生文件与命令工具、子代理接口和权限。
-- **T3 Code**：线程及工作区绑定、当前线程迁移和独立线程启动。
-- **Magpie**：Skill 分发、已有模型路由基础设施及 GitHub MCP。
-- **poteto-delivery**：发现 PStack、适配调用接口、传递任务上下文，并应用本次调用的 GitHub 路由约定。
+## 职责与边界
 
-实际执行规则统一维护在 [SKILL.md](SKILL.md)，不在 README 重复定义。
+| 组件 | 职责 |
+| --- | --- |
+| T3 Code | 主要工作环境，提供线程、Worktree 和相关原生工具 |
+| PStack | 实际任务分类、Playbook、Agent 编排、实现、验证和 PR 生命周期 |
+| Magpie | Skill 分发、MCP 资源和现有模型路由，包括 GitHub MCP |
+| poteto-delivery | 显式调用入口、必要的 Harness 接口适配、工作区绑定和上下文交接 |
+
+poteto-delivery 不替代 PStack，也不重复实现其功能。本项目不维护任务状态机、Agent 调度器或执行引擎，不提供通用 Agent 框架或 Subagent Runtime。T3 Code 的个人使用约定只适用于本次显式调用及必要交接，不会扩展为其他项目的全局规则。
+
+详细执行规则由 [SKILL.md](SKILL.md) 维护。
+
+## 依赖
+
+- 已安装的 PStack，以及会话中可解析的 `poteto-mode` 和所需依赖。
+- T3 Code 当前会话暴露的线程和 Worktree 原生工具。
+- 涉及 GitHub 操作时可用的 Magpie GitHub MCP。
+- 在 Pi 中，实际加载的 [@tintinweb/pi-subagents](https://github.com/tintinweb/pi-subagents)，以及该运行时已注册、启用的 PStack 所需 Agent 类型。
+
+Pi 能读取 PStack Skill，不代表 `poteto-agent` 已注册。Pi 使用现有扩展提供的 `Agent` 接口及当前 Schema，不假设 Pi 内置了子代理能力。本项目不采用 `nicobailon/pi-subagents`，也不实现或分发替代运行时。
+
+Pi 的用户环境以 `~/.pi` 为准。默认 Agent Definition 位置为 `~/.pi/agent/agents/`，扩展设置位于 `~/.pi/agent/subagents.json`；若用户设置了 `PI_CODING_AGENT_DIR`，以其实际目录为准。Agent 注册及禁用未知类型回退是外部环境前提，本仓库不管理这些个人配置，不复制 Agent Definition，也不提供配置脚本。缺少扩展、所需类型或兼容接口时，入口报告 `BLOCKED`。
 
 ## 安装
 
-1. 通过 Magpie 或当前 Harness 支持的方式安装 PStack，使 `poteto-mode` 及所需依赖出现在会话注册的 Skill 或 Plugin 资源中。
-2. 将本仓库作为 `poteto-delivery` Skill 安装到当前 Harness 支持的位置，保留目录结构，包括 [agents/openai.yaml](agents/openai.yaml)。也可通过当前 Harness 支持的 Skill 分发方式安装。
-3. 在 T3 中使用时，确保会话暴露原生线程和工作区工具；涉及 GitHub 操作时，确保 Magpie GitHub MCP 可用。
+1. 通过 Magpie 或当前环境支持的分发方式安装 PStack，使 `poteto-mode` 及所需依赖可从会话注册的 Skill 或 Plugin 资源解析。
+2. 将本仓库安装为 `poteto-delivery` Skill，保留目录结构，包括 [agents/openai.yaml](agents/openai.yaml)。
+3. 确认当前 T3 会话具有所需原生工具和 Magpie MCP 能力。在 Pi 中，还需确认已加载的扩展能解析并启动 PStack 请求的 Agent 类型。
 
-本仓库不包含 PStack 副本，不提供脚本、Hook 或委派运行时，也不修改上游 Skill。
+本仓库不包含 PStack 副本，不修改上游 Skill，也不新增脚本、Hook 或常驻服务。
 
-## 调用
+## 使用
 
-在当前 Harness 中显式调用并提供任务正文：
+显式调用入口并提供任务正文。以下是各环境的调用形式，不代表完整的集成验证承诺。
 
-| Harness | 入口示例 |
-| --- | --- |
-| Pi | `/skill:poteto-delivery 修复订单页面的提交错误` |
-| Claude Code | `/poteto-delivery 修复订单页面的提交错误` |
-| Codex | `$poteto-delivery 修复订单页面的提交错误` |
+| 环境 | 入口示例 | 适配范围 |
+| --- | --- | --- |
+| T3 Code 中的 Pi | `/skill:poteto-delivery 修复订单页面的提交错误` | 当前辅助适配环境，依赖已加载的扩展、Agent Definition 和真实工具接口 |
+| Claude Code | `/poteto-delivery 修复订单页面的提交错误` | 保留现有接口规则，使用前核对该会话的上游适配和所需能力 |
+| Codex | `$poteto-delivery 修复订单页面的提交错误` | 保留接口规则及显式调用元数据，使用前核对当前宿主版本和工具能力 |
 
-Pi 和 Claude Code 使用 Skill frontmatter 的显式调用控制；Codex 使用 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`。实际支持取决于当前 Harness 版本，不能仅凭 frontmatter 宣称三个宿主都已强制执行。
+Pi 和 Claude Code 的显式调用控制使用 Skill frontmatter；Codex 使用 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`。是否实际生效取决于当前宿主版本，不能仅凭这些文件宣称已强制执行。
 
-入口会按已安装 PStack 的上游适配规则加载和组合技能，再将工作流交给 PStack。缺少必要能力时会报告具体阻塞，不建立替代工作流。
+Claude Code 和 Codex 的规则及元数据不等于端到端验证。本项目保留有用的接口适配说明，不承诺未经验证的能力，也不为多 Harness 的表面一致性引入抽象层。
 
-## 使用说明
-
-在 T3 中，当前线程迁移到新 Worktree 与启动独立线程是不同操作。入口先核对线程绑定，并优先复用属于当前任务的工作区。迁移通过 T3 handoff 延续原任务；独立线程仅在用户要求时启动，目的线程重新核对绑定和依赖。
-
-本次显式调用及必要交接中，本地文件修改使用原生工具，提交和分支推送使用 git；PR、Issue、Review、评论、标签与 Reviewer 操作使用 Magpie GitHub MCP。缺少对应 MCP 能力时报告 `BLOCKED`。该约定不会安装为其他任务的全局规则。
-
-本仓库提供接口规则和最小调用元数据，不保证某个环境已经完成集成验证。实际使用仍需检查该会话的 Skill 注册、工具 Schema、T3 绑定和 MCP 能力。
+入口核对 T3 线程与工作区绑定，再按已安装 PStack 的上游规则加载和组合技能，将执行交给 PStack。本地修改使用原生文件工具，提交和推送使用 git；PR 等 GitHub 操作使用 Magpie GitHub MCP。具体交接和路由规则见 [SKILL.md](SKILL.md)。

@@ -1,10 +1,15 @@
 ---
 name: poteto-delivery
-description: Explicit entry adapter for installed PStack poteto-mode on Pi, Claude Code, or Codex, with native T3 workspace handoff. Use only when the user explicitly invokes poteto-delivery.
+description: Explicit entry for personal T3 Code engineering habits using installed PStack poteto-mode, with Pi interface adaptation. Use only when the user explicitly invokes poteto-delivery.
 disable-model-invocation: true
 ---
 
 # poteto-delivery
+
+This skill records personal engineering habits for T3 Code, its primary
+working environment. Pi is an auxiliary environment whose compatibility depends
+on installed extensions and agent definitions. Keep other host guidance limited
+to available interfaces; it does not establish complete integration support.
 
 Apply this entry only to the user's explicit invocation and its necessary T3
 continuation. A task book, ordinary message, another skill, or a subagent does
@@ -17,14 +22,23 @@ threads and workspace binding. Magpie supplies skill distribution and existing
 model routing. The host owns native tools and permissions. This adapter only
 resolves interfaces, binds the workspace, and carries the necessary context.
 Do not add a workflow, runtime, scripts, hooks, state, or global instructions.
+Do not duplicate PStack or build a task state machine, agent scheduler, execution
+engine, or general harness abstraction. Keep these personal conventions scoped
+to this invocation and its necessary continuation.
 
 ## Resolve PStack and the host interface
 
 Preserve the user's task, revisions, authorization, repository, and requested
 base. Resolve `poteto-mode/SKILL.md` from this session's registered skill or
 plugin resources, following registered paths rather than choosing an arbitrary
-cached version. A plugin usually stores it at `skills/poteto-mode/SKILL.md`;
-a flattened skill library may register it separately.
+cached version. Retain the readable file's absolute path and its provenance as
+the current session's registered resource in the actual handoff context, not
+just a skill name or relative path. Do not select by version sorting or replace
+it with a Cursor plugin cache or another installation. If the registered path
+cannot be resolved or read, report `BLOCKED` with the specific gap. A plugin
+usually stores it at `skills/poteto-mode/SKILL.md`; a flattened skill library
+may register it separately. Resolve this at runtime; do not hardcode a user's
+machine path here.
 
 Read the installed entry in full and its applicable upstream harness rules.
 Upstream composition rules take priority over the interface guidance below,
@@ -36,12 +50,65 @@ files. Report missing, disabled, ambiguous, or incompatible dependencies.
 
 Discover PStack through the current session's registered Skill resources. Read
 skills with Pi's actual file tools and compose or invoke them using its exposed
-capabilities and upstream instructions. Pi need not have a built-in Agent or
-Task tool. Use the current schemas for files, commands, and any available
-subagent extension; do not transplant Claude Task, Skill, AskQuestion, or
-EnterWorktree calls. If upstream supports composition in the current session,
-read and apply its entry there. If a required capability is missing, report the
-specific gap instead of implementing a substitute PStack workflow.
+capabilities and upstream instructions. If upstream supports composition in the
+current session, read and apply its entry there. Before handing control over,
+include the resolved absolute `poteto-mode/SKILL.md` path and its registered
+resource provenance in the actual PStack context. Require PStack to continue
+passing it through its existing composition and delegation, as specified below.
+
+Pi's Agent capability comes from the actually loaded
+`@tintinweb/pi-subagents` extension, not an assumed built-in Agent or Task tool.
+Use the session's exposed Agent tool and current schema, including
+`subagent_type`, `prompt`, `description`, `max_turns`, and `run_in_background`
+when required by PStack. Do not transplant Claude Task, Skill, AskQuestion, or
+EnterWorktree calls. Preserve PStack's ownership of playbooks, agent roles,
+models, and execution; this adapter only resolves the interface.
+
+Check existing evidence before delegation, in this order: the current Agent
+tool schema's available-type list; Pi Subagents' registry or `/agents`
+information; existing actual dispatch records and runtime metadata. Confirm
+that the exact requested type, including `poteto-agent`, is registered and
+enabled, the interface accepts PStack's required parameters, and unknown-type
+fallback is disabled. A definition file's existence or an agent's self-reported
+identity alone is insufficient.
+
+Reliable registration information and the current schema normally suffice for
+preflight. Do not create an extra test agent on each invocation or PStack
+startup, repeat a full read-only probe, reread large skills to check a type, or
+spawn a probe when registration evidence already answers the question.
+
+PStack's main agent owns normal delegation and checks its execution results.
+For an actual delegation requesting `poteto-agent`, it must confirm from runtime
+evidence that both requested and resolved types are `poteto-agent` and no
+fallback occurred. If either the real type or fallback status cannot be
+confirmed, report `BLOCKED`; a successful call alone does not prove the type.
+Do not launch a duplicate test agent for this verification.
+
+PStack must include the supplied absolute Skill path in child contexts that
+need it. When child prompts or tool arguments are visible, its main agent
+checks that the correct path was passed. If a transcript is available, it may
+also check actual file reads. Transcripts, including `.output` records, are
+optional, best-effort evidence, not a guaranteed audit interface. Do not assume
+unexposed records exist, install recording tools, or build an audit mechanism.
+Passing the path does not prove a read; missing traces do not prove it was not
+read. Report what was verified and what could not be independently observed.
+Do not report `BLOCKED` solely because actual file reading cannot be proven.
+These are PStack execution checks, not post-handoff adapter monitoring.
+
+Unknown types must fail. Never accept `general-purpose` or another agent as a
+replacement for the requested type. If the extension is missing, the type is
+unavailable, fallback occurs, or the required dispatch interface cannot be used
+or reliably verified, report `BLOCKED` and name the gap. Do not bypass it with
+another agent, main-agent execution of the delegated work, or a substitute local
+workflow.
+
+Pi's user configuration lives under `~/.pi` by default. Agent definitions in
+`~/.pi/agent/agents/` and the strict unknown-type fallback policy in
+`~/.pi/agent/subagents.json` are user-managed prerequisites. Honor the actual
+`PI_CODING_AGENT_DIR` when set. Inspect configuration read-only as needed; do not
+modify definitions, links, their targets, or runtime settings, copy personal
+configuration into this repository, or ask Magpie to manage it. Do not implement
+agent discovery, registration, fallback, or scheduling here.
 
 ### Claude Code
 
@@ -103,9 +170,14 @@ runtime schema.
 4. Supply a complete `continuationPrompt`: the task and revisions, authorization
    limits, repository, target branch/base and remote-start choice, the selected
    host's interface guidance, remaining entry steps, and the GitHub route block
-   below. Include task text if its source file is unavailable at the destination.
+   below. Include the resolved PStack Skill absolute path and its registered
+   resource provenance as literal context in `continuationPrompt`. Include task
+   text if its source file is unavailable at the destination.
    Say this continues the same explicit invocation and must recheck binding,
-   resolve installed PStack, then hand control to it once. Call handoff last
+   verify the supplied path is still readable and matches the destination's
+   registered PStack resource, then hand control to it once. If it is inaccessible
+   or mismatched, report `BLOCKED` with the path and specific gap; do not silently
+   switch to a Cursor plugin cache or another version. Call handoff last
    in the turn because it ends the active turn. Resume only after checking
    the destination binding against that context. In the resumed thread,
    call `t3_worktree_status` again and confirm the target repository, branch,
@@ -152,9 +224,18 @@ After binding, compose or invoke the installed entry using its upstream harness
 rules and the current host's real interfaces. Writing a slash command in a
 brief alone is not execution. Let PStack select its own dependencies and agents.
 Carry the user's full task and revisions, authorization limits, confirmed
-workspace context, and route block. A fresh child may not inherit a skill the
-parent read: provide the necessary context using upstream's composition method.
-Do not paste this entire adapter into unrelated briefs.
+workspace context, and route block. Include the resolved absolute
+`poteto-mode/SKILL.md` path and state that it comes from this session's registered
+Skill resource. Complete this path resolution and context preparation before
+handoff. In that same actual handoff, require PStack to decide which children
+need the Skill and carry this exact path into their prompts through its existing
+context composition and delegation mechanism. Children must read the supplied
+path directly, rather than search other installations. A fresh child may not
+inherit a skill the parent read. PStack owns subsequent delegation, execution,
+and checks using available runtime evidence; do not return execution results to
+this adapter for a second orchestration pass. Do not modify upstream PStack or
+agent definitions or add a delegation mechanism to deliver this context. Do not
+paste this entire adapter into unrelated briefs.
 
 After handing control to PStack, perform no adapter phase checks, monitoring,
 or cleanup. Do not re-enter on later messages without another explicit

@@ -1,10 +1,15 @@
 ---
 name: poteto-delivery
-description: Explicit entry adapter for installed PStack poteto-mode on Pi, Claude Code, or Codex, with native T3 workspace handoff. Use only when the user explicitly invokes poteto-delivery.
+description: Explicit entry for personal T3 Code engineering habits using installed PStack poteto-mode, with Pi interface adaptation. Use only when the user explicitly invokes poteto-delivery.
 disable-model-invocation: true
 ---
 
 # poteto-delivery
+
+This skill records personal engineering habits for T3 Code, its primary
+working environment. Pi is an auxiliary environment whose compatibility depends
+on installed extensions and agent definitions. Keep other host guidance limited
+to available interfaces; it does not establish complete integration support.
 
 Apply this entry only to the user's explicit invocation and its necessary T3
 continuation. A task book, ordinary message, another skill, or a subagent does
@@ -17,6 +22,9 @@ threads and workspace binding. Magpie supplies skill distribution and existing
 model routing. The host owns native tools and permissions. This adapter only
 resolves interfaces, binds the workspace, and carries the necessary context.
 Do not add a workflow, runtime, scripts, hooks, state, or global instructions.
+Do not duplicate PStack or build a task state machine, agent scheduler, execution
+engine, or general harness abstraction. Keep these personal conventions scoped
+to this invocation and its necessary continuation.
 
 ## Resolve PStack and the host interface
 
@@ -36,12 +44,38 @@ files. Report missing, disabled, ambiguous, or incompatible dependencies.
 
 Discover PStack through the current session's registered Skill resources. Read
 skills with Pi's actual file tools and compose or invoke them using its exposed
-capabilities and upstream instructions. Pi need not have a built-in Agent or
-Task tool. Use the current schemas for files, commands, and any available
-subagent extension; do not transplant Claude Task, Skill, AskQuestion, or
-EnterWorktree calls. If upstream supports composition in the current session,
-read and apply its entry there. If a required capability is missing, report the
-specific gap instead of implementing a substitute PStack workflow.
+capabilities and upstream instructions. If upstream supports composition in the
+current session, read and apply its entry there.
+
+Pi's Agent capability comes from the actually loaded
+`@tintinweb/pi-subagents` extension, not an assumed built-in Agent or Task tool.
+Use the session's exposed Agent tool and current schema, including
+`subagent_type`, `prompt`, `description`, `max_turns`, and `run_in_background`
+when required by PStack. Do not transplant Claude Task, Skill, AskQuestion, or
+EnterWorktree calls. Preserve PStack's ownership of playbooks, agent roles,
+models, and execution; this adapter only resolves the interface.
+
+Before required delegation, confirm that the extension can resolve and start the
+exact agent type PStack requests, including `poteto-agent`. Reading a Skill or
+finding an agent definition alone does not establish registration. Check runtime
+registration or dispatch metadata for the resolved type and any fallback notice;
+an agent's self-reported identity is not proof. Use read-only capability probes
+when needed, without running playbooks, editing files, spawning nested agents,
+or performing GitHub operations.
+
+Unknown types must fail. Never accept `general-purpose` or another agent as a
+replacement for the requested type. If the extension is missing, the type is
+unavailable, fallback occurs, or the required interface cannot be used or
+verified, report `BLOCKED` and name the gap. Do not bypass it with another agent,
+main-agent execution of the delegated work, or a substitute local workflow.
+
+Pi's user configuration lives under `~/.pi` by default. Agent definitions in
+`~/.pi/agent/agents/` and the strict unknown-type fallback policy in
+`~/.pi/agent/subagents.json` are user-managed prerequisites. Honor the actual
+`PI_CODING_AGENT_DIR` when set. Inspect configuration read-only as needed; do not
+modify definitions, links, their targets, or runtime settings, copy personal
+configuration into this repository, or ask Magpie to manage it. Do not implement
+agent discovery, registration, fallback, or scheduling here.
 
 ### Claude Code
 

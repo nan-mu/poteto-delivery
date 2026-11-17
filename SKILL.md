@@ -1,160 +1,187 @@
 ---
 name: poteto-delivery
-description: Explicit entry point for handing a repository task to the installed PStack poteto-mode, with native T3 workspace binding when running in T3 Code. Run only when the user invokes /poteto-delivery.
+description: Explicit entry adapter for installed PStack poteto-mode on Pi, Claude Code, or Codex, with native T3 workspace handoff. Use only when the user explicitly invokes poteto-delivery.
 disable-model-invocation: true
 ---
 
 # poteto-delivery
 
-Adapt the entry, then let PStack own the task. Apply these entry steps only to
-this explicit invocation, including its native T3 continuation. Do not activate
-for task books, ordinary messages, other skills, or subagents on your own.
+Apply this entry only to the user's explicit invocation and its necessary T3
+continuation. A task book, ordinary message, another skill, or a subagent does
+not activate it. Pi uses `/skill:poteto-delivery`, Claude Code uses
+`/poteto-delivery`, and Codex uses `$poteto-delivery`.
 
-## Resolve the installed upstream
+PStack owns classification, playbooks, workflow, agents, model selection,
+implementation, verification, review, PR lifecycle, and resumption. T3 owns
+threads and workspace binding. Magpie supplies skill distribution and existing
+model routing. The host owns native tools and permissions. This adapter only
+resolves interfaces, binds the workspace, and carries the necessary context.
+Do not add a workflow, runtime, scripts, hooks, state, or global instructions.
 
-1. Keep the user's task, revisions, repository, and authorization intact.
-2. Resolve PStack from the current session's registered plugin location. If that
-   location is unavailable, inspect `plugins/installed_plugins.json` under the
-   active `CLAUDE_CONFIG_DIR`, or `~/.claude` only when that variable is unset.
-   Match the enabled installation and its scope to the current project using
-   the applicable Claude settings. Do not select an arbitrary cached copy or
-   sort version strings to choose an installation. If the installation is
-   missing, disabled, or ambiguous, report the dependency problem and stop.
-3. Confirm that the resolved root contains `docs/harness/claude-code.md` and
-   `skills/poteto-mode/SKILL.md`. Use the installed originals. Do not pin a
-   version, download a substitute, copy upstream content, or change PStack.
+## Resolve PStack and the host interface
+
+Preserve the user's task, revisions, authorization, repository, and requested
+base. Resolve `poteto-mode/SKILL.md` from this session's registered skill or
+plugin resources, following registered paths rather than choosing an arbitrary
+cached version. A plugin usually stores it at `skills/poteto-mode/SKILL.md`;
+a flattened skill library may register it separately.
+
+Read the installed entry in full and its applicable upstream harness rules.
+Upstream composition rules take priority over the interface guidance below,
+subject to the user's authorization, host constraints, and the GitHub route.
+Do not copy, download a replacement for, or modify upstream skills or harness
+files. Report missing, disabled, ambiguous, or incompatible dependencies.
+
+### Pi
+
+Discover PStack through the current session's registered Skill resources. Read
+skills with Pi's actual file tools and compose or invoke them using its exposed
+capabilities and upstream instructions. Pi need not have a built-in Agent or
+Task tool. Use the current schemas for files, commands, and any available
+subagent extension; do not transplant Claude Task, Skill, AskQuestion, or
+EnterWorktree calls. If upstream supports composition in the current session,
+read and apply its entry there. If a required capability is missing, report the
+specific gap instead of implementing a substitute PStack workflow.
+
+### Claude Code
+
+First resolve the session's enabled `poteto-mode/SKILL.md` from its registered
+Plugin or Skill resources, including Magpie's flattened Skill installations.
+If necessary, inspect `plugins/installed_plugins.json` under the active
+`CLAUDE_CONFIG_DIR` (default `~/.claude`), matching enabled status and
+installation scope to this project. Do not select a cached version by sorting
+version strings. If the installation includes `docs/harness/claude-code.md`,
+read and follow it. Otherwise inspect the installed PStack skills for rules
+applicable to Claude Code and use those when they provide the necessary
+adaptation. A missing standalone harness document alone is not a blocker.
+Report BLOCKED only when an actual required capability or dependency is
+missing, or the correct adaptation cannot be determined; name the specific
+gap. Do not download, copy, or maintain replacement upstream files.
+Compose internal skills using those upstream rules; the Skill tool cannot be
+assumed to invoke every internal skill. Use the current Agent/Task schema and
+accepted model choices, without assuming arbitrary provider IDs are valid.
+Workspace operations in T3 use the native T3 tools below.
+
+### Codex
+
+Discover PStack from registered Skill resources and follow Codex's supported
+Agent Skills loading and composition. Prefer installed upstream Codex adapter
+rules when available. Read the entry directly when that is the supported skill
+loading method. Use exposed subagent tools and their real schemas only as
+PStack requires; do not translate Claude Task arguments into unverified Codex
+parameters or assume native subagents accept arbitrary third-party models.
+
+Codex's explicit invocation policy is the minimal `agents/openai.yaml` shipped
+with this skill: `policy.allow_implicit_invocation: false`. The frontmatter
+`disable-model-invocation` is used by Pi and Claude Code; it does not establish
+Codex support. If the running host version does not honor its corresponding
+invocation control, disclose that limitation instead of claiming enforcement.
 
 ## Bind the workspace through T3
 
-Outside T3, skip this section and leave workspace handling to PStack and the
-host. Inside T3, use the tools actually exposed by the current session. Read
-their current descriptions and schemas; an MCP prefix can vary. Missing T3
-tools in a known T3 session are a capability problem, not a non-T3 fallback.
+Outside T3, leave workspace handling to PStack and the host. In a known T3
+session, inspect the currently exposed tool descriptions and schemas; prefixes
+and parameters can vary by version. Missing tools are capability blockers,
+not evidence that the session is outside T3. Historical examples are not the
+runtime schema.
 
-1. Read `t3_worktree_status`. For repository changes, establish the intended
-   task's workspace binding before delegating execution. Reuse an existing
-   binding for this task. Check the reported repository, path, and branch
-   against the requested task and the actual shell cwd and git checkout with
-   native read-only tools. A path or branch alone does not prove task identity.
-2. If a suitable task worktree already exists, use T3's exposed native binding
-   or thread-launch capability to continue there. Do not create a duplicate.
-   Use `t3_worktree_list` when needed to locate an existing checkout.
-3. If a new worktree is needed and this thread is unattached, call
-   `t3_worktree_handoff` with the intended branch and base, using the live
-   schema. Use the user's target branch when specified; otherwise choose an
-   unused task branch consistent with repository rules. Let T3 choose the path
-   from its configuration. Preserve the user's
-   intended base and remote-start choice rather than silently replacing them
-   with a different default.
-4. Supply `continuationPrompt` with the task and its revisions, authorization
-   limits, repository and intended base, the route block below, and the
-   remaining entry steps. Include task text when its file will not be readable
-   from the destination. State that this continues the same explicit
-   invocation: recheck the T3 binding, resolve the installed PStack there,
-   then delegate once. Call handoff last in the turn; it ends the live
-   session. Do not start PStack in the old checkout.
-5. If the current binding belongs to another task, or a native operation is
-   unavailable, rejected, or leaves a mismatch, report the specific blocker
-   before task edits. Do not emulate T3 with shell-created worktrees,
-   `EnterWorktree`, configuration edits, or a custom verifier. Do not move or
-   clean another task's workspace. A thread launch, when supported, must carry
-   the same complete continuation and bind the intended workspace. After a
-   successful launch, end the source invocation without executing the task
-   there or monitoring the destination thread.
+1. Call `t3_worktree_status`. Read `attached`, `worktreePath`, `branch`,
+   `projectWorkspaceRoot`, and `defaultStartFromOrigin`. Compare them with the
+   user's repository and task context. Native read-only git/CWD checks can
+   corroborate the checkout; they do not prove thread binding or task identity.
+2. Reuse a suitable current binding. When needed, use `t3_worktree_list` to
+   locate an existing task workspace. Match repository, branch, and task
+   context together; do not adopt another task's worktree. Reuse a matching
+   workspace through an available native binding operation; if none exists,
+   report that blocker instead of creating a duplicate.
+3. For a new worktree, use `t3_worktree_handoff` only after confirming the
+   current thread is unattached and suitable for migration. Set an explicit
+   target `branch` and `baseRef`. Honor the requested base and remote-start
+   choice; otherwise follow the current host's documented defaults and
+   `defaultStartFromOrigin`. Pass `startFromOrigin` only as the live schema
+   supports. Let T3 choose the path. Do not start PStack in the old checkout.
+4. Supply a complete `continuationPrompt`: the task and revisions, authorization
+   limits, repository, target branch/base and remote-start choice, the selected
+   host's interface guidance, remaining entry steps, and the GitHub route block
+   below. Include task text if its source file is unavailable at the destination.
+   Say this continues the same explicit invocation and must recheck binding,
+   resolve installed PStack, then hand control to it once. Call handoff last
+   in the turn because it ends the active turn. Resume only after checking
+   the destination binding against that context. In the resumed thread,
+   call `t3_worktree_status` again and confirm the target repository, branch,
+   and binding before allowing PStack to execute.
+5. `t3_thread_launch` starts an independent thread; it does not migrate this
+   thread or attach this thread to an existing worktree. Use it only when the
+   user requests an independent thread, not as an automatic handoff fallback.
+   Read its live schema and specify the appropriate `workspaceStrategy`,
+   repository/project, branch/base, and existing-worktree identity when needed.
+   Give it the same complete continuation and route block; do not assume it
+   inherits skills or MCP context. The destination must check binding before
+   PStack executes. After a successful launch, end this entry in the source
+   thread without also executing the task or monitoring the destination.
 
-## Delegate once, then end the adapter's role
+Interpret the handoff result using the current return schema. Check returned
+`worktreePath`, `branch`, `baseRef`, and `startedFromOrigin` against the intended
+destination; creation of the worktree does not establish continuation success.
+Judge `continuation.status` and `setupScript.status` separately:
 
-Read the resolved `docs/harness/claude-code.md` and
-`skills/poteto-mode/SKILL.md` in full. Follow the installed harness's composition
-method and let poteto-mode run the user's task in the bound workspace. Merely
-writing a slash command in a prompt is not execution. Let PStack select and
-load its own playbooks and dependencies.
+- `continuation.status: scheduled` means continuation has been arranged;
+  report its returned `delivery` without claiming the task is complete.
+  `skipped` means no continuation was arranged; do not report task startup.
+  `failed` means report its `detail` and do not claim handoff success.
+- `setupScript.status: started` means only that the script started, not that
+  it finished or succeeded; retain the returned `scriptName` and `terminalId`.
+  `no-script` means no script is configured. `skipped` means it did not run.
+  `failed` means retain and report its `detail`, independently of continuation.
 
-PStack owns classification, orchestration, subagents, models, implementation,
-verification, review, decision trails, PR delivery, and task resumption. Do not
-restate or override those procedures. Preserve the user's actual authorization
-and host rules. Include the route block below in this delegation. Do not add
-any other tool preference.
+Handoff ends the active turn. Interpret and report the returned result when
+available; if the turn has already ended, inspect the available handoff result
+on resumption and report any failure details there. Do not add polling,
+monitors, scripts, or task state to wait for either status. Missing or unknown
+result fields are an unresolved capability/version gap, not proof of success.
 
-After delegation, perform no adapter phase checks, monitoring, or cleanup, and
-do not re-enter on later messages unless explicitly invoked again. Do not
-propagate this skill as standing instructions to delegates or other workflows.
-Do not install hooks, global rules, scripts, task state, or default injection.
-If an interface gap prevents delegation, report it; do not replace PStack with
-a local workflow.
+If a current binding belongs to another task, a native operation fails, a
+required tool is unavailable, or the resulting binding does not match, report
+the specific blocker before task edits. Do not guess paths, modify T3 config,
+create workspace management scripts, use `git worktree add` or EnterWorktree
+as a substitute, or move/clean another task's workspace.
+
+## Hand control to PStack once
+
+After binding, compose or invoke the installed entry using its upstream harness
+rules and the current host's real interfaces. Writing a slash command in a
+brief alone is not execution. Let PStack select its own dependencies and agents.
+Carry the user's full task and revisions, authorization limits, confirmed
+workspace context, and route block. A fresh child may not inherit a skill the
+parent read: provide the necessary context using upstream's composition method.
+Do not paste this entire adapter into unrelated briefs.
+
+After handing control to PStack, perform no adapter phase checks, monitoring,
+or cleanup. Do not re-enter on later messages without another explicit
+invocation. If composition requires an unavailable capability, report it;
+do not replace PStack with a local workflow.
 
 ## Route GitHub through Magpie
 
-Apply this route only while this skill is explicitly invoked, including its
-T3 continuation. Do not install it as a hook, a global rule, or a default
-for other tasks.
-
-A Claude Code subagent does not receive a skill its parent already read. It
-receives the prompt it was given. PStack already copies the original brief
-and later directives into a fresh subagent. Put the route block in that
-brief. Do not add a scheduler, a hook, or a prompt template, and do not
-change how PStack chooses agents.
-
-Include the route block in the one delegation to PStack, and in the T3
-continuation. When a later brief assigns a push, or assigns a pull request,
-issue, review, comment, label, or reviewer action, include the same block.
-Do not append it separately to unrelated briefs. It may remain present
-through PStack's inherited original brief. Do not paste the rest of this
-skill into any brief.
-
-Route block:
+Include this block in the initial PStack brief, necessary T3 continuations,
+and later briefs assigning a push or GitHub operation. It may be retained
+through PStack's inherited original brief. Do not separately inject it into
+unrelated work or install it as standing instructions.
 
 ```text
-Local git operations use git. Push the remote branch with git push. Do not
-use MCP push_files in place of git push, and do not recreate a local commit
-through MCP. GitHub pull requests, issues, reviews, comments, labels, and
-reviewers use the Magpie GitHub MCP tools this session exposes. Do not invoke
-the `gh` or `origin` CLI executables (for example, `gh pr ...` or `origin pr
-...`), or any other GitHub/Forge CLI. Do not call the GitHub HTTP API. If the
-needed GitHub MCP tool is missing, mark that platform action BLOCKED and name
-the missing tool. Do not fall back.
+Use the current host's native file tools for local edits. Use git for local
+branches, commits, fetches, and remote branch transport, including git push.
+Do not replace git push with MCP push_files or recreate local commits via MCP.
+Use this session's exposed Magpie GitHub MCP tools for pull requests, issues,
+reviews, comments, labels, and reviewers. Do not use gh, origin, or any other
+GitHub/Forge CLI, or fall back to the GitHub HTTP API. Do not build a client.
+If a required MCP tool is missing or fails, mark that action BLOCKED and report
+the missing capability or error. Local work and git push may continue. Create
+a PR only after git push succeeds, and report a PR only when the MCP create
+call returns it. Discover the actual tool names and schemas in this session.
 ```
 
-Inside this invocation and those briefs, this tool choice overrides PStack's
-default forge selection (`origin pr` when available, otherwise `gh`) in
-`docs/harness/claude-code.md` and
-`skills/poteto-mode/playbooks/opening-a-pr.md`. It does not override
-classification, playbook choice, orchestration, models, implementation,
-review, when a pull request is opened, what it contains, its lifecycle,
-audit, or resumption. Do not copy or rewrite those files.
-
-Use the GitHub MCP tools the current session exposes through Magpie. Use git
-for branch transport. Do not hardcode an MCP server implementation, and do
-not add a GitHub client here.
-
-| Action | Tool |
-| --- | --- |
-| Edit files | The session's file tools |
-| Local branches, `git add`, and `git commit` | git |
-| Create or update the remote branch | `git push -u origin <branch>` |
-| Create, read, or update a pull request | The session's Magpie GitHub MCP tools |
-| Pull request comments | The session's Magpie GitHub MCP tools |
-| Issues | The session's Magpie GitHub MCP tools |
-| Labels and reviewers | The session's Magpie GitHub MCP tools |
-| Worktrees in T3 Code | The T3 tools in "Bind the workspace through T3", not `git worktree add` |
-| Worktrees outside T3 | PStack and the host. This route adds no worktree rule. |
-
-In T3 Code, do not create a task workspace that T3 does not manage. Outside
-T3, do not add a T3 worktree rule. `git add`, `git commit`, `git fetch`, and
-`git push` stay git in both places.
-
-PStack still owns the pull request workflow. This route only chooses the tool.
-
-Do not use MCP `push_files` in place of `git push`. Do not recreate a local
-commit through MCP. Keep the local commit SHA, author, and parents. Create
-the pull request only after `git push` succeeds.
-
-If the session does not expose the GitHub MCP tool the action needs, fail
-closed. Do not fall back to `gh`, another GitHub CLI, or the GitHub HTTP
-API. Local edits, tests, commit, and `git push` may continue, and a pushed
-branch stays. Mark that action BLOCKED, and name the missing MCP server or
-tool. A missing `create_pull_request` tool blocks pull request creation.
-Never say a pull request exists unless that MCP call returned it.
-
-Do not impose a checklist, phase gate, branch naming scheme, Draft PR
-policy, comment cadence, or permission system.
+This route overrides upstream forge tool selection only during this explicit
+invocation and its necessary handoffs. PStack still determines PR timing,
+contents, lifecycle, review, and resumption. Add no adapter-specific permission
+system, draft policy, phase gate, checklist, or comment cadence.
